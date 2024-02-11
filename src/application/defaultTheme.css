@@ -1,0 +1,28 @@
+
+.root {
+    -fx-background-color: lightblue;
+    -fx-text-fill: darkblue;
+    -fx-background-image: url('blue1.jpg');
+    -fx-background-size: cover;
+    -fx-background-repeat: no-repeat;
+    -fx-font-weight: bold;
+    -fx-text-fill:black;
+     -fx-font-size: 11pt;
+}
+
+.button {
+    -fx-background-color: darkblue;
+    -fx-text-fill: white;
+}
+
+.menu-item:hover {
+    -fx-background-color: darkblue;
+    -fx-text-fill: white;
+}
+.menu-item:focused {
+    -fx-background-color: darkblue;
+}
+.label {
+	-fx-font-weight: bold;
+	 -fx-font-size: 14pt;
+}

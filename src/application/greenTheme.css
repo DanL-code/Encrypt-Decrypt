@@ -1,0 +1,26 @@
+.root {
+    -fx-background-color: lightgreen;
+    -fx-text-fill: darkblue;
+    -fx-background-image: url('green.jpg');
+    -fx-background-size: cover;
+    -fx-background-repeat: no-repeat;
+    -fx-font-weight: bold;
+    -fx-font-size: 11pt;
+    -fx-text-fill:white;
+}
+
+.button {
+    -fx-background-color: darkgreen;
+    -fx-text-fill: white;
+}
+.menu-item:hover {
+    -fx-background-color: darkgreen;
+    -fx-text-fill: white;
+}
+.menu-item:focused {
+    -fx-background-color: darkgreen;
+}
+.label {
+	-fx-font-weight: bold;
+	 -fx-font-size: 14pt;
+}

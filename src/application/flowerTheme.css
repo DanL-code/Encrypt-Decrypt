@@ -1,0 +1,27 @@
+
+.root {
+    -fx-background-color: green;
+    -fx-text-fill: green;
+    -fx-background-image: url('loginPic.jpg');
+    -fx-background-size: cover;
+    -fx-background-repeat: no-repeat;
+    -fx-font-weight: bold;
+    -fx-font-size: 11pt;
+    -fx-text-fill:black;
+}
+
+.button {
+    -fx-background-color: rgba(119, 132, 55, 1);
+    -fx-text-fill: white;
+}
+.menu-item:hover {
+    -fx-background-color: rgba(119, 132, 55, 1);
+    -fx-text-fill: white;
+}
+.menu-item:focused {
+    -fx-background-color: rgba(119, 132, 55, 1);
+}
+.label {
+	-fx-font-weight: bold;
+	 -fx-font-size: 14pt;
+}
