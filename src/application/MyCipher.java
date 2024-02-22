@@ -39,12 +39,11 @@ public class MyCipher extends Application {
 	private Scene scene = new Scene(root, 1000, 750);
 	private String masterKey;
 	private Algorithms algorithm = new Algorithms();
+	
+	private DataModule dataModule = new DataModule();
 
-	private String JDBC_URL;
-	private String USERNAME;
-	private String PASSWORD;
-	private String chosenDB;
 	private MenuButton dbChooserBtn;
+	private String chosenDB;
 
 	@Override
 	public void start(Stage primaryStage) {
@@ -81,7 +80,37 @@ public class MyCipher extends Application {
 
 		Button loginButton = new Button("Login");
 		GridPane.setConstraints(loginButton, 1, 3);
-		loginButton.setOnAction(e -> loginMethod(primaryStage));
+		loginButton.setOnAction(e -> {
+			String userName = usernameField.getText();
+			String password = passwordField.getText();
+			if (userName != null && !userName.isEmpty() && password != null && !password.isEmpty()) {
+				String inputP = algorithm.hashPassword(password);
+				dataModule.loginMethod(userName, password, inputP, new DataModuleListener() {
+
+					@Override
+					public void onSuccess(String msg) {
+						// TODO Auto-generated method stub
+						algorithm.showConfirmation(primaryStage, "Login Successful.");
+						mainScene(primaryStage, userName);
+					}
+
+					@Override
+					public void onFaild(String msg) {
+						// TODO Auto-generated method stub
+						statusLabel.setText(msg);
+					}
+
+					@Override
+					public void onError(String msg) {
+						// TODO Auto-generated method stub
+						algorithm.showErrorInfo(primaryStage, msg);
+					}
+					
+				});
+			} else {
+				statusLabel.setText("Username doesn't exist, please create an account");
+			}
+		});
 
 		Button createButton = new Button("Create a New Account");
 		GridPane.setConstraints(createButton, 1, 4);
@@ -103,16 +132,16 @@ public class MyCipher extends Application {
 		
 		localDb.setOnAction(event -> {
 			dbChooserBtn.setText("Local Host Database");
-			JDBC_URL = "jdbc:mysql://127.0.0.1:3306/Security";
-			USERNAME = "root";
-			PASSWORD = "";
+			dataModule.setJDBC_URL("jdbc:mysql://127.0.0.1:3306/Security");
+			dataModule.setUSERNAME("root");
+			dataModule.setPASSWORD("");
 			chosenDB = "Local Host";
 		});
 		cloudDb.setOnAction(event -> {
 			dbChooserBtn.setText("Cloud Database");
-			JDBC_URL = "jdbc:mysql://my-aws-db.*******/Security";
-			USERNAME = "admin";
-			PASSWORD = "adminisdan";
+			dataModule.setJDBC_URL("jdbc:mysql://my-aws-db.*******/Security");
+			dataModule.setUSERNAME("admin");
+			dataModule.setPASSWORD("adminisdan");
 			chosenDB = "Cloud";
 		});
 
@@ -127,46 +156,6 @@ public class MyCipher extends Application {
 		root.setCenter(grid);
 		root.setTop(l);
 
-	}
-
-	private void loginMethod(Stage primaryStage) {
-
-		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
-			Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-			Statement statement = connection.createStatement();
-
-			String userName = usernameField.getText();
-			String password = passwordField.getText();
-			if (userName != null && !userName.isEmpty() && password != null && !password.isEmpty()) {
-				String sql = "SELECT Password from users where Name = \"" + userName + "\"";
-				System.out.println(sql);
-
-				ResultSet resultSet = statement.executeQuery(sql);
-
-				if (resultSet.next()) {
-					String sqlPassword = resultSet.getString("Password");
-					String inputP = algorithm.hashPassword(password);
-					if (password != null && inputP.equals(sqlPassword)) {
-//						statusLabel.setText("Successful login");
-						algorithm.showConfirmation(primaryStage, "Login Successful.");
-						mainScene(primaryStage, userName);
-					} else {
-						statusLabel.setText("Wrong Password");
-					}
-				} else {
-					statusLabel.setText("Username doesn't exist, please create an account");
-				}
-				resultSet.close();
-				statement.close();
-				connection.close();
-			} else {
-				algorithm.showErrorInfo(primaryStage, "Please make sure username and password are filled.");
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			algorithm.showErrorInfo(primaryStage, "Please choose a database.");
-		}
 	}
 
 	// create new account page
@@ -197,7 +186,40 @@ public class MyCipher extends Application {
 		Button createBtn = new Button("Create");
 		GridPane.setConstraints(createBtn, 1, 3);
 		createBtn.setOnAction(e -> {
-			createAccountMethod(primaryStage);
+			String newUserName = usernameField.getText();
+			String newPassword = passwordField.getText();
+			String encryptPassword = algorithm.hashPassword(newPassword);
+			if (newUserName != null && !newUserName.isEmpty() && newPassword != null && !newPassword.isEmpty()) {
+				dataModule.createAccountMethod(newUserName, newPassword, encryptPassword, new DataModuleListener() {
+
+					@Override
+					public void onSuccess(String msg) {
+						// TODO Auto-generated method stub
+						statusLabel.setText("Account created successfully");
+						loginScene(primaryStage);
+						algorithm.showConfirmation(primaryStage, "Created Successfully.");
+		
+					}
+
+					@Override
+					public void onFaild(String msg) {
+						// TODO Auto-generated method stub
+						algorithm.showErrorInfo(primaryStage, "Username already exists. Please choose a different username.");
+						
+					}
+
+					@Override
+					public void onError(String msg) {
+						// TODO Auto-generated method stub
+						
+					}
+					
+				});
+			}else {
+				algorithm.showErrorInfo(primaryStage, "Please make sure username and password are filled.");
+			}
+			
+			
 		});
 
 		Button backBtn = new Button("Back to Login");
@@ -215,61 +237,32 @@ public class MyCipher extends Application {
 		root.setCenter(grid);
 	}
 
-	private void createAccountMethod(Stage primaryStage) {
-
-		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
-			Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-			Statement statement = connection.createStatement();
-
-			String newUserName = usernameField.getText();
-			String newPassword = passwordField.getText();
-			String encryptPassword = algorithm.hashPassword(newPassword);
-
-			String checkExistingUserSql = "SELECT * FROM users WHERE Name = ?";
-			PreparedStatement checkStatement = connection.prepareStatement(checkExistingUserSql);
-			checkStatement.setString(1, newUserName);
-			ResultSet checkResultSet = checkStatement.executeQuery();
-
-			if (newUserName != null && !newUserName.isEmpty() && newPassword != null && !newPassword.isEmpty()) {
-				if (checkResultSet.next()) {
-					algorithm.showErrorInfo(primaryStage,
-							"Username already exists. Please choose a different username.");
-				} else {
-					String sql = "INSERT INTO users (Name, Password) VALUES (\"" + newUserName + "\",\""
-							+ encryptPassword + "\") ON DUPLICATE KEY UPDATE Name = Name ";
-					String sqlTheme = "INSERT INTO theme_setting (User_Name, Theme_Value) VALUES (\"" + newUserName
-							+ "\", \"defaultTheme.css\") ON DUPLICATE KEY UPDATE User_Name = User_Name ";
-
-					System.out.println(sql);
-					System.out.println(sqlTheme);
-
-					int rowsAffected = statement.executeUpdate(sql);
-
-					if (rowsAffected > 0) {
-						statusLabel.setText("Account created successfully");
-						loginScene(primaryStage);
-					}
-					statement.executeUpdate(sqlTheme);
-					statement.close();
-					connection.close();
-					algorithm.showConfirmation(primaryStage, "Created Successfully.");
-				}
-			} else {
-				algorithm.showErrorInfo(primaryStage, "Please make sure username and password are filled.");
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
 	// create main page
 	public void mainScene(Stage primaryStage, String userName) {
 		try {
 
 			// Setup encrypt gridPane
-			loadTheme(userName);
+			dataModule.loadTheme(userName, new DataModuleListener() {
+
+				@Override
+				public void onSuccess(String msg) {
+					// TODO Auto-generated method stub
+					scene.getStylesheets().add(getClass().getResource(msg).toExternalForm());
+				}
+
+				@Override
+				public void onFaild(String msg) {
+					// TODO Auto-generated method stub
+					
+				}
+
+				@Override
+				public void onError(String msg) {
+					// TODO Auto-generated method stub
+					
+				}
+				
+			});
 			primaryStage.setTitle("🔢Encryption & Decryption🔢");
 			DESSimple des1 = new DESSimple();
 			AESSimple aes1 = new AESSimple();
@@ -354,7 +347,7 @@ public class MyCipher extends Application {
 
 				if (indexStr != null && !indexStr.isEmpty() && plainText != null && !plainText.isEmpty()
 						&& !cipherBtn.getText().equals("Pick an Algorithm")) {
-					Boolean exist = checkIndex(userName, indexStr);
+					Boolean exist = dataModule.checkIndex(userName, indexStr);
 					if (!exist) {
 						if (cipherBtn.getText().equals("Caesar Cipher")) {
 							int key = 0;
@@ -369,7 +362,7 @@ public class MyCipher extends Application {
 							String keyAsString = String.valueOf(key);
 							String hashedKey = algorithm.hashPassword(keyAsString);
 							String pickedAlgorithm = cipherBtn.getText();
-							storeMsg(userName, result, hashedKey, indexStr, pickedAlgorithm);
+							dataModule.storeMsg(userName, result, hashedKey, indexStr, pickedAlgorithm);
 							algorithm.showConfirmation(primaryStage,
 									"Encryption successful. Please keep the index and key secure for decryption. You may also save the key to a local file.");
 						} else if (cipherBtn.getText().equals("DES")) {
@@ -380,7 +373,7 @@ public class MyCipher extends Application {
 //							encryptResultField.setText(result);
 							encryptKeyField.setText(keyDES);
 							String pickedAlgorithm = cipherBtn.getText();
-							storeMsg(userName, result, hashedKey, indexStr, pickedAlgorithm);
+							dataModule.storeMsg(userName, result, hashedKey, indexStr, pickedAlgorithm);
 							algorithm.showConfirmation(primaryStage,
 									"Encryption successful. Please keep the index and key secure for decryption. You may also save the key to a local file.");
 
@@ -392,7 +385,7 @@ public class MyCipher extends Application {
 							encryptKeyField.setText(keyAES);
 							String hashedKey = algorithm.hashPassword(keyAES);
 							String pickedAlgorithm = cipherBtn.getText();
-							storeMsg(userName, result, hashedKey, indexStr, pickedAlgorithm);
+							dataModule.storeMsg(userName, result, hashedKey, indexStr, pickedAlgorithm);
 							algorithm.showConfirmation(primaryStage,
 									"Encryption successful. Please keep the index and key secure for decryption. You may also save the key to a local file.");
 						}
@@ -487,8 +480,8 @@ public class MyCipher extends Application {
 			decryptSubmitBtn.setOnAction(event -> {
 				String decryptIndex = decryptIndexField.getText();
 				String decryptKey = decryptKeyField.getText();
-				String sqlMsg = checkSQLMsg(userName, decryptIndex);
-				String decryptAlgorithm = checkChosenAlgorithm(userName, decryptIndex);
+				String sqlMsg = dataModule.checkSQLMsg(userName, decryptIndex);
+				String decryptAlgorithm = dataModule.checkChosenAlgorithm(userName, decryptIndex);
 				if (decryptIndex != null && !decryptIndex.isEmpty() && decryptKey != null && !decryptKey.isEmpty()) {
 					if (decryptAlgorithm.equals("Caesar Cipher")) {
 						int caesarKey = Integer.parseInt(decryptKey);
@@ -512,7 +505,8 @@ public class MyCipher extends Application {
 				masterKey = algorithm.getMasterKey();
 				if (decryptIndex != null && !decryptIndex.isEmpty()) {
 					String pw = getPasswordFromUser(primaryStage);
-					Boolean validated = validatePassword(userName, pw);
+					String inputP = algorithm.hashPassword(pw);
+					Boolean validated = dataModule.validatePassword(userName, pw, inputP);
 					if (validated) {
 						try {
 							String loadedKey = algorithm.loadKeyFile(decryptIndex);
@@ -554,20 +548,20 @@ public class MyCipher extends Application {
 				themeBtn.setText("Default Theme");
 				scene.getStylesheets().clear();
 				scene.getStylesheets().add(getClass().getResource("defaultTheme.css").toExternalForm());
-				storeTheme(userName, "defaultTheme.css");
+				dataModule.storeTheme(userName, "defaultTheme.css");
 			});
 			greenBtn.setOnAction(event -> {
 				themeBtn.setText("Green Leaf");
 				scene.getStylesheets().clear();
 				scene.getStylesheets().add(getClass().getResource("greenTheme.css").toExternalForm());
-				storeTheme(userName, "greenTheme.css");
+				dataModule.storeTheme(userName, "greenTheme.css");
 			});
 
 			flowerBtn.setOnAction(event -> {
 				themeBtn.setText("Daisy Flower");
 				scene.getStylesheets().clear();
 				scene.getStylesheets().add(getClass().getResource("flowerTheme.css").toExternalForm());
-				storeTheme(userName, "flowerTheme.css");
+				dataModule.storeTheme(userName, "flowerTheme.css");
 			});
 
 			// organise page layout
@@ -589,121 +583,6 @@ public class MyCipher extends Application {
 		}
 	}
 
-	public void storeMsg(String userName, String encryptMsg, String hashedKey, String msgIndex,
-			String pickedAlgorithm) {
-		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
-			Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-			String storeMsgSql = "INSERT INTO messages (user_name, encrypt_msg, hashed_key, msg_index, chosen_algorithm) VALUES (?,?,?,?,?) ";
-			PreparedStatement storeMsgStatement = connection.prepareStatement(storeMsgSql);
-			storeMsgStatement.setString(1, userName);
-			storeMsgStatement.setString(2, encryptMsg);
-			storeMsgStatement.setString(3, hashedKey);
-			storeMsgStatement.setString(4, msgIndex);
-			storeMsgStatement.setString(5, pickedAlgorithm);
-
-			storeMsgStatement.executeUpdate();
-
-			System.out.println(storeMsgStatement);
-
-			storeMsgStatement.close();
-			connection.close();
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public String checkChosenAlgorithm(String userName, String inputIndex) {
-		String chosenAlgorithmStr = null;
-		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
-			Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-			String sql = "SELECT chosen_algorithm FROM messages WHERE user_name = \"" + userName
-					+ "\" AND msg_index = \"" + inputIndex + "\"";
-			PreparedStatement statement = connection.prepareStatement(sql);
-			ResultSet resultSet = statement.executeQuery();
-
-			if (resultSet.next()) {
-				chosenAlgorithmStr = resultSet.getString("chosen_algorithm");
-				System.out.println("ldld: " + chosenAlgorithmStr);
-			}
-			resultSet.close();
-			statement.close();
-			connection.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return chosenAlgorithmStr;
-	}
-
-	public String checkSQLMsg(String userName, String inputIndex) {
-		String sqlMsg = null;
-		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
-			Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-			String sql = "SELECT encrypt_msg FROM messages WHERE user_name = \"" + userName + "\" AND msg_index = \""
-					+ inputIndex + "\"";
-			PreparedStatement statement = connection.prepareStatement(sql);
-			ResultSet resultSet = statement.executeQuery();
-			if (resultSet.next()) {
-				sqlMsg = resultSet.getString("encrypt_msg");
-				System.out.println("ldld22222: " + sqlMsg);
-			}
-			resultSet.close();
-			statement.close();
-			connection.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return sqlMsg;
-	}
-
-	public boolean checkIndex(String userName, String inputIndex) {
-		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
-			Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-			String sql = "SELECT id FROM messages WHERE user_name = \"" + userName + "\" AND msg_index = \""
-					+ inputIndex + "\"";
-			PreparedStatement statement = connection.prepareStatement(sql);
-			ResultSet resultSet = statement.executeQuery();
-			if (resultSet.next()) {
-				return true;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return false;
-	}
-
-	public void storeTheme(String userName, String theme) {
-		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
-			Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-			String sql = "UPDATE theme_setting SET Theme_Value = ? WHERE User_Name = \"" + userName + "\"";
-			PreparedStatement statement = connection.prepareStatement(sql);
-			statement.setString(1, theme);
-			statement.executeUpdate();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public void loadTheme(String userName) {
-		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
-			Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-			String sql = "SELECT Theme_Value FROM theme_setting WHERE User_Name =\"" + userName + "\"";
-			PreparedStatement statement = connection.prepareStatement(sql);
-			ResultSet resultSet = statement.executeQuery(sql);
-			if (resultSet.next()) {
-				String theme = resultSet.getString("Theme_Value");
-				scene.getStylesheets().add(getClass().getResource(theme).toExternalForm());
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 
 	public String getPasswordFromUser(Stage primaryStage) {
 		dialog = new Dialog<>();
@@ -724,38 +603,6 @@ public class MyCipher extends Application {
         });
 		Optional<String> result = dialog.showAndWait();
 		return result.orElse(null);
-	}
-
-	public Boolean validatePassword(String userName, String password) {
-
-		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
-			Connection connection = DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD);
-			Statement statement = connection.createStatement();
-
-			String sql = "SELECT Password from users where Name = \"" + userName + "\"";
-			System.out.println(sql);
-
-			ResultSet resultSet = statement.executeQuery(sql);
-
-			if (resultSet.next()) {
-				String sqlPassword = resultSet.getString("Password");
-				String inputP = algorithm.hashPassword(password);
-				if (password != null && inputP.equals(sqlPassword)) {
-					return true;
-				} else {
-					return false;
-				}
-			}
-
-			resultSet.close();
-			statement.close();
-			connection.close();
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return false;
 	}
 
 }
