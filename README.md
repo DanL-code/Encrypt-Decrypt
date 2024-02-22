@@ -5,3 +5,5 @@ The university project entails using JavaFX for constructing the user interface,
 
 ![encrypt-decrypt](https://github.com/DanL-code/Encrypt-Decrypt/blob/main/screen.png)
 
+![encrypt-decrypt-structure](https://github.com/DanL-code/Encrypt-Decrypt/blob/main/Structure%20of%20code.png)
+
